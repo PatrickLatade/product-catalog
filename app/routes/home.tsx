@@ -1,7 +1,7 @@
 import { useLoaderData } from "react-router-dom";
 import { db } from "app/db/client";
 import { products } from "app/db/schema";
-import { ProductCard } from "app/components/Productcard";
+import { ProductCard } from "app/components/ProductCard";
 
 export async function loader() {
   const result = await db.select().from(products);
