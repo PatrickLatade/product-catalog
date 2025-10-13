@@ -10,4 +10,7 @@ export default [
 
   // Admin
   route("admin", "routes/admin.tsx"),
+
+  // test
+  route("test", "routes/test.tsx"),
 ] satisfies RouteConfig;

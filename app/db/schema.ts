@@ -6,4 +6,5 @@ export const products = mysqlTable("products", {
   description: text("description"),
   price: double("price").notNull(),
   imageUrl: varchar("image_url", { length: 512 }),
+  stock: int("stock").notNull().default(0),
 });

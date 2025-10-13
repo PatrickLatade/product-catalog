@@ -5,4 +5,12 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
+  preview: {
+    port: 4173,
+    // 👇 Serve from the client build folder React Router created
+    open: true,
+  },
+  build: {
+    outDir: "build/client",
+  },
 });

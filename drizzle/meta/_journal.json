@@ -15,6 +15,13 @@
       "when": 1760190263121,
       "tag": "0001_charming_nick_fury",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1760366529877,
+      "tag": "0002_blushing_fixer",
+      "breakpoints": true
     }
   ]
 }
