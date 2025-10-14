@@ -8,7 +8,8 @@ import path from "path";
 
 export const adminAction: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
-  const _action = formData.get("_action");
+  const _action = formData.get("_action")?.toString();
+  const intent = formData.get("intent")?.toString(); // <- for stock adjustments
 
   const name = formData.get("name")?.toString() || "";
   const price = parseFloat(formData.get("price")?.toString() || "0");
@@ -27,18 +28,18 @@ export const adminAction: ActionFunction = async ({ request }) => {
       const buffer = Buffer.from(arrayBuffer);
       await fs.writeFile(filePath, buffer);
 
-      imageUrl = `/images/${filename}`; // store relative path
+      imageUrl = `/images/${filename}`;
     }
 
+    // ---------- Normal actions ----------
     if (_action === "create") {
       await db.insert(products).values({
         name,
         price,
         stock,
         description,
-        imageUrl, // <- use camelCase as defined in schema
+        imageUrl,
       });
-
       return { success: "Product added successfully!" };
     }
 
@@ -52,7 +53,7 @@ export const adminAction: ActionFunction = async ({ request }) => {
           price,
           stock,
           description,
-          ...(imageUrl ? { imageUrl } : {}), // only update if new image
+          ...(imageUrl ? { imageUrl } : {}),
         })
         .where(eq(products.id, id));
 
@@ -63,13 +64,20 @@ export const adminAction: ActionFunction = async ({ request }) => {
       const id = parseInt(formData.get("id")?.toString() || "0");
       if (!id) throw new Error("Missing product ID for delete");
 
-      await db.delete(products)
-        .where(eq(products.id, id));
-
+      await db.delete(products).where(eq(products.id, id));
       return { success: "Product deleted successfully!" };
     }
 
-    throw new Error("Unknown action");
+    // ---------- Stock adjustment ----------
+    if (intent === "adjust_stock") {
+      const id = parseInt(formData.get("id")?.toString() || "0");
+      if (!id) throw new Error("Missing product ID for stock adjustment");
+
+      await db.update(products).set({ stock }).where(eq(products.id, id));
+      return { success: "Stock adjusted successfully!" };
+    }
+
+    throw new Error("Unknown action or intent");
   } catch (err: any) {
     return { error: err.message || "Something went wrong" };
   }
