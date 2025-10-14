@@ -1,14 +1,13 @@
 // app/components/admin/Toast.tsx
+import { AnimatePresence, motion } from "framer-motion";
+
 interface ToastProps {
-  toast: { message: string; type: "success" | "warning" | "error" } | null;
-  isExiting?: boolean;
+  toasts: { id: string; message: string; type: "success" | "warning" | "error" }[];
 }
 
-export function Toast({ toast, isExiting = false }: ToastProps) {
-  if (!toast) return null;
-
-  const getAlertClass = () => {
-    switch (toast.type) {
+export function Toast({ toasts }: ToastProps) {
+  const getAlertClass = (type: string) => {
+    switch (type) {
       case "success":
         return "alert-success";
       case "warning":
@@ -20,8 +19,8 @@ export function Toast({ toast, isExiting = false }: ToastProps) {
     }
   };
 
-  const getIcon = () => {
-    if (toast.type === "success") {
+  const getIcon = (type: string) => {
+    if (type === "success") {
       return (
         <path
           strokeLinecap="round"
@@ -30,7 +29,7 @@ export function Toast({ toast, isExiting = false }: ToastProps) {
           d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
         />
       );
-    } else if (toast.type === "warning") {
+    } else if (type === "warning") {
       return (
         <path
           strokeLinecap="round"
@@ -52,20 +51,35 @@ export function Toast({ toast, isExiting = false }: ToastProps) {
   };
 
   return (
-    <div 
-      className={`fixed top-4 right-4 z-50 alert ${getAlertClass()} max-w-md shadow-lg ${
-        isExiting ? "animate-fade-out" : "animate-fade-in"
-      }`}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="stroke-current shrink-0 h-6 w-6"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        {getIcon()}
-      </svg>
-      <span>{toast.message}</span>
+    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 items-end">
+      <AnimatePresence>
+        {toasts.map((toast) => (
+          <motion.div
+            key={toast.id}
+            className={`alert ${getAlertClass(toast.type)} max-w-md shadow-lg`}
+            initial={{ opacity: 0, y: 40, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{
+              opacity: 0,
+              y: -20,
+              scale: 0.97,
+              transition: { duration: 0.35, ease: "easeInOut" },
+            }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            layout
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="stroke-current shrink-0 h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              {getIcon(toast.type)}
+            </svg>
+            <span>{toast.message}</span>
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
