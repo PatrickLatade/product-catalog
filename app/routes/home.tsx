@@ -1,10 +1,12 @@
 import { Navbar } from "app/components/Navbar";
-import { useLoaderData } from "react-router-dom";
-import { Suspense } from "react";
+import { useLoaderData, useSearchParams, useNavigate } from "react-router-dom";
+import { Suspense, useState, useMemo, useEffect } from "react";
 import { db } from "app/db/client";
 import { products } from "app/db/schema";
 import { ProductCard } from "app/components/ProductCard";
 import { motion } from "framer-motion";
+import { FilterBar } from "app/components/FilterBar";
+import { useProductFilters } from "app/hooks/useProductFilters";
 
 export async function loader() {
   const result = await db.select().from(products);
@@ -13,6 +15,37 @@ export async function loader() {
 
 export default function Home() {
   const productList = useLoaderData<typeof loader>();
+  const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // --- State synced with URL ---
+  const [search, setSearch] = useState(params.get("search") ?? "");
+  const [sort, setSort] = useState(params.get("sort") ?? "name-asc");
+  const [stockFilter, setStockFilter] = useState(params.get("stock") ?? "all");
+
+  // --- Sync state → URL when any filter changes ---
+  useEffect(() => {
+    const newParams = new URLSearchParams();
+    if (search.trim()) newParams.set("search", search);
+    if (sort !== "name-asc") newParams.set("sort", sort);
+    if (stockFilter !== "all") newParams.set("stock", stockFilter);
+    navigate({ search: newParams.toString() }, { replace: true });
+  }, [search, sort, stockFilter, navigate]);
+
+  // --- Filter + Sort logic ---
+
+  // --- Use custom hook ---
+  const { filteredProducts, hasActiveFilters, clearFilters } =
+    useProductFilters(productList, search, sort, stockFilter);
+
+  // --- Reset filters ---
+  const handleClearFilters = () => {
+    const cleared = clearFilters();
+    setSearch(cleared.search);
+    setSort(cleared.sort);
+    setStockFilter(cleared.stock);
+    setParams({});
+  };
 
   return (
     <div
@@ -23,6 +56,7 @@ export default function Home() {
 
       <main className="pt-16">
         <div className="container mx-auto p-8">
+          {/* --- Title --- */}
           <motion.h1
             className="text-4xl font-bold mb-6 text-center"
             initial={{ opacity: 0, y: -20 }}
@@ -32,6 +66,19 @@ export default function Home() {
             🛍️ Product Catalog
           </motion.h1>
 
+          {/* --- Reusable Filter Bar --- */}
+          <FilterBar
+            search={search}
+            setSearch={setSearch}
+            sort={sort}
+            setSort={setSort}
+            stockFilter={stockFilter}
+            setStockFilter={setStockFilter}
+            clearFilters={handleClearFilters}
+            hasActiveFilters={hasActiveFilters}
+          />
+
+          {/* --- Product Grid --- */}
           <Suspense
             fallback={
               <div className="flex justify-center items-center py-20">
@@ -39,34 +86,34 @@ export default function Home() {
               </div>
             }
           >
-            {productList.length === 0 ? (
+            {filteredProducts.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="text-center text-gray-400 py-16"
               >
-                <p className="text-lg">No products available yet.</p>
+                <p className="text-lg">No products found.</p>
               </motion.div>
             ) : (
               <motion.div
-                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  visible: {
-                    opacity: 1,
-                    y: 0,
-                    transition: { staggerChildren: 0.05 },
-                  },
-                }}
+                key={filteredProducts.length + search + sort + stockFilter}
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 items-stretch"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
               >
-                {productList.map((p) => (
+                {filteredProducts.map((p) => (
                   <motion.div
                     key={p.id}
-                    variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex"
                   >
-                    <ProductCard {...p} />
+                    <div className="flex-1">
+                      <ProductCard {...p} />
+                    </div>
                   </motion.div>
                 ))}
               </motion.div>

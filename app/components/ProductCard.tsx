@@ -23,16 +23,17 @@ export function ProductCard({
   return (
     <Link
       to={`/product/${id}`}
-      className={`block card bg-base-100 border border-base-300 shadow-md hover:shadow-xl transition-all duration-300 ${
+      className={`card flex flex-col h-full bg-base-100 border border-base-300 shadow-md hover:shadow-xl transition-all duration-300 ${
         isOutOfStock ? "opacity-60 grayscale" : "hover:scale-105"
       }`}
     >
       {/* --- Product Image --- */}
-      <figure className="relative overflow-hidden rounded-t-lg">
+      <figure className="relative aspect-[4/3] w-full overflow-hidden rounded-t-lg bg-base-200 flex-shrink-0">
         <img
           src={imageUrl ?? "https://placehold.co/400x300?text=No+Image"}
           alt={name}
-          className="w-full h-48 object-cover"
+          className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105"
+          loading="lazy"
         />
 
         {/* --- Stock badge --- */}
@@ -52,21 +53,27 @@ export function ProductCard({
       </figure>
 
       {/* --- Product Info --- */}
-      <div className="card-body p-4">
-        <h2 className="card-title text-lg font-semibold">{name}</h2>
+      <div className="card-body p-4 flex flex-col flex-grow">
+        {/* Title - fixed height */}
+        <h2 className="card-title text-lg font-semibold line-clamp-2 min-h-[3.5rem]">
+          {name}
+        </h2>
 
-        {description && (
-          <p className="text-sm text-base-content/70 line-clamp-2">
-            {description}
-          </p>
-        )}
+        {/* Description - fixed height with consistent space */}
+        <div className="min-h-[2.5rem] mb-4">
+          {description && (
+            <p className="text-sm text-base-content/70 line-clamp-2">
+              {description}
+            </p>
+          )}
+        </div>
 
-        <div className="flex justify-between items-center mt-4">
+        {/* Price and button - pushed to bottom */}
+        <div className="flex justify-between items-center mt-auto">
           <span className="text-xl font-bold text-primary">
             ${price.toFixed(2)}
           </span>
 
-          {/* Remove the individual View Details button since entire card is clickable */}
           <span className={`btn btn-sm ${
             isOutOfStock
               ? "btn-disabled opacity-70"
