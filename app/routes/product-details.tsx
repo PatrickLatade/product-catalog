@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Toast } from "app/components/admin/Toast";
 import { ProductCard } from "app/components/ProductCard";
 import { useState, useMemo } from "react";
+import { useCart } from "app/hooks/useCart";
 
 // --- Loader ---
 export async function loader({ params }: { params: { id: string } }) {
@@ -26,6 +27,7 @@ export async function loader({ params }: { params: { id: string } }) {
 // --- Page Component ---
 export default function ProductDetail() {
   const { product, related } = useLoaderData<typeof loader>();
+  const { cart, addToCart, removeFromCart } = useCart();
   const [toasts, setToasts] = useState<
     { id: string; message: string; type: "success" | "error" }[]
   >([]);
@@ -41,19 +43,39 @@ export default function ProductDetail() {
     );
   }
 
-  const isOutOfStock = product.stock <= 0;
-  const isLowStock = product.stock > 0 && product.stock <= 5;
+  // Compute available stock based on cart
+  const inCart = cart.find((item) => item.id === product.id);
+  const availableStock = product.stock - (inCart?.quantity || 0);
 
-  // --- Mock Add to Cart handler ---
+  const isOutOfStock = availableStock <= 0;
+  const isLowStock = availableStock > 0 && availableStock <= 5;
+
+  // --- Add to Cart handler ---
   const handleAddToCart = () => {
     if (isOutOfStock) return;
+
+    addToCart(product, 1);
 
     const newToast = {
       id: crypto.randomUUID(),
       message: `${product.name} added to cart! 🛒`,
       type: "success" as const,
     };
+    setToasts((prev) => [...prev, newToast]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== newToast.id));
+    }, 2000);
+  };
 
+  // --- Remove from Cart handler ---
+  const handleRemoveFromCart = () => {
+    removeFromCart(product.id);
+
+    const newToast = {
+      id: crypto.randomUUID(),
+      message: `${product.name} removed from cart.`,
+      type: "error" as const,
+    };
     setToasts((prev) => [...prev, newToast]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== newToast.id));
@@ -125,11 +147,11 @@ export default function ProductDetail() {
                 </span>
               ) : isLowStock ? (
                 <span className="badge badge-warning text-white">
-                  Low Stock ({product.stock})
+                  Low Stock ({availableStock})
                 </span>
               ) : (
                 <span className="badge badge-success text-white">
-                  In Stock ({product.stock})
+                  In Stock ({availableStock})
                 </span>
               )}
             </div>
@@ -139,7 +161,7 @@ export default function ProductDetail() {
               ${product.price.toFixed(2)}
             </p>
 
-            <div className="card-actions mt-4">
+            <div className="card-actions mt-4 flex flex-col sm:flex-row gap-2">
               <button
                 onClick={handleAddToCart}
                 className={`btn btn-primary w-full sm:w-auto ${
@@ -148,6 +170,15 @@ export default function ProductDetail() {
               >
                 {isOutOfStock ? "Out of Stock" : "🛒 Add to Cart"}
               </button>
+
+              {inCart && (
+                <button
+                  onClick={handleRemoveFromCart}
+                  className="btn btn-outline btn-error w-full sm:w-auto"
+                >
+                  Remove from Cart
+                </button>
+              )}
             </div>
           </div>
         </div>

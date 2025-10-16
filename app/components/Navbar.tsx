@@ -1,23 +1,28 @@
 import { Link, NavLink } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { SunIcon, MoonIcon } from "lucide-react";
+import { SunIcon, MoonIcon, ShoppingCart, Home, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useCart } from "app/hooks/useCart"; // ✅ for live cart count
 
 export function Navbar() {
   const [theme, setTheme] = useState<string>("light");
   const [isMounted, setIsMounted] = useState(false);
+  const { cart } = useCart(); // ✅ Cart state
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Initialize after mount
+  // Initialize theme after mount
   useEffect(() => {
     setIsMounted(true);
-    const savedTheme = localStorage.getItem("theme") || "light";
-    setTheme(savedTheme);
-    document.documentElement.setAttribute("data-theme", savedTheme);
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("theme") || "light";
+      setTheme(savedTheme);
+      document.documentElement.setAttribute("data-theme", savedTheme);
+    }
   }, []);
 
   // Persist theme to <html> + localStorage
   useEffect(() => {
-    if (isMounted) {
+    if (isMounted && typeof window !== "undefined") {
       document.documentElement.setAttribute("data-theme", theme);
       localStorage.setItem("theme", theme);
     }
@@ -29,7 +34,7 @@ export function Navbar() {
 
   return (
     <div className="navbar bg-base-100 shadow-md px-6 sticky top-0 z-40 transition-colors">
-      {/* --- Left Section: Logo --- */}
+      {/* --- Left: Logo --- */}
       <div className="flex-1">
         <Link
           to="/"
@@ -39,33 +44,54 @@ export function Navbar() {
         </Link>
       </div>
 
-      {/* --- Right Section: Nav Links + Theme Toggle --- */}
+      {/* --- Right: Nav Links + Theme Toggle --- */}
       <div className="flex-none">
-        {/* --- Desktop Menu --- */}
-        <ul className="menu menu-horizontal px-1 hidden sm:flex items-center gap-2">
+        <ul className="menu menu-horizontal px-1 hidden sm:flex items-center gap-3">
+          {/* --- Home Link --- */}
           <li>
             <NavLink
               to="/"
               className={({ isActive }) =>
-                isActive ? "text-primary font-semibold" : ""
+                `flex items-center gap-1 ${isActive ? "text-primary font-semibold" : ""}`
               }
             >
+              <Home size={18} />
               Home
             </NavLink>
           </li>
 
+          {/* --- Admin Link --- */}
           <li>
             <NavLink
               to="/admin"
               className={({ isActive }) =>
-                isActive ? "text-primary font-semibold" : ""
+                `flex items-center gap-1 ${isActive ? "text-primary font-semibold" : ""}`
               }
             >
+              <Settings size={18} />
               Admin
             </NavLink>
           </li>
 
-          {/* --- Theme Toggle now inline with links --- */}
+          {/* --- Cart Link w/ Badge --- */}
+          <li>
+            <NavLink
+              to="/cart"
+              className={({ isActive }) =>
+                `relative flex items-center gap-1 ${isActive ? "text-primary font-semibold" : ""}`
+              }
+            >
+              <ShoppingCart size={18} />
+              Cart
+              {cartCount > 0 && (
+                <span className="badge badge-sm badge-primary text-white absolute -top-2 -right-3">
+                  {cartCount}
+                </span>
+              )}
+            </NavLink>
+          </li>
+
+          {/* --- Theme Toggle --- */}
           <li>
             <button
               onClick={toggleTheme}
@@ -92,7 +118,7 @@ export function Navbar() {
           </li>
         </ul>
 
-        {/* --- Mobile Dropdown Menu --- */}
+        {/* --- Mobile Menu --- */}
         <div className="dropdown dropdown-end sm:hidden">
           <label tabIndex={0} className="btn btn-ghost btn-circle">
             <svg
@@ -115,17 +141,32 @@ export function Navbar() {
             className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-44"
           >
             <li>
-              <NavLink to="/">Home</NavLink>
+              <NavLink to="/">
+                <Home size={16} className="mr-1" /> Home
+              </NavLink>
             </li>
             <li>
-              <NavLink to="/admin">Admin</NavLink>
+              <NavLink to="/admin">
+                <Settings size={16} className="mr-1" /> Admin
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/cart">
+                <ShoppingCart size={16} className="mr-1" /> Cart{" "}
+                {cartCount > 0 && (
+                  <span className="badge badge-sm badge-primary ml-1 text-white">
+                    {cartCount}
+                  </span>
+                )}
+              </NavLink>
             </li>
             <li>
               <button
                 onClick={toggleTheme}
                 className="btn btn-ghost justify-start"
               >
-                {isMounted && (theme === "light" ? "🌙 Dark Mode" : "☀️ Light Mode")}
+                {isMounted &&
+                  (theme === "light" ? "🌙 Dark Mode" : "☀️ Light Mode")}
               </button>
             </li>
           </ul>

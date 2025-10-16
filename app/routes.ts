@@ -13,4 +13,7 @@ export default [
 
   // test
   route("test", "routes/test.tsx"),
+
+  // cart
+  route("cart", "routes/cart.tsx"),
 ] satisfies RouteConfig;

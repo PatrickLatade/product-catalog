@@ -63,7 +63,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            🛍️ Product Catalog
+            📋 Product List
           </motion.h1>
 
           {/* --- Reusable Filter Bar --- */}
