@@ -35,7 +35,7 @@ export function FilterBar({
 
   return (
     <motion.div
-      className={`sticky top-[7.0rem] z-[35] bg-base-200/80 backdrop-blur-md border border-base-300 rounded-lg transition-all duration-300 ${
+      className={`sticky top-[5rem] z-[35] bg-base-200/80 backdrop-blur-md border border-base-300 rounded-lg transition-all duration-300 ${
         scrolled ? "py-2 px-3 shadow-md scale-[0.98]" : "py-3 px-4 shadow-sm"
       } mb-6`}
       style={{ marginTop: "1.5rem" }}

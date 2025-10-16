@@ -29,6 +29,7 @@ export function Navbar() {
 
   return (
     <div className="navbar bg-base-100 shadow-md px-6 sticky top-0 z-40 transition-colors">
+      {/* --- Left Section: Logo --- */}
       <div className="flex-1">
         <Link
           to="/"
@@ -38,9 +39,10 @@ export function Navbar() {
         </Link>
       </div>
 
-      <div className="flex-none gap-3">
-        {/* --- Desktop Links --- */}
-        <ul className="menu menu-horizontal px-1 hidden sm:flex">
+      {/* --- Right Section: Nav Links + Theme Toggle --- */}
+      <div className="flex-none">
+        {/* --- Desktop Menu --- */}
+        <ul className="menu menu-horizontal px-1 hidden sm:flex items-center gap-2">
           <li>
             <NavLink
               to="/"
@@ -51,6 +53,7 @@ export function Navbar() {
               Home
             </NavLink>
           </li>
+
           <li>
             <NavLink
               to="/admin"
@@ -61,28 +64,35 @@ export function Navbar() {
               Admin
             </NavLink>
           </li>
+
+          {/* --- Theme Toggle now inline with links --- */}
+          <li>
+            <button
+              onClick={toggleTheme}
+              className="btn btn-ghost btn-circle hover:bg-base-200"
+              title={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={theme}
+                  initial={{ opacity: 0, rotate: -90, scale: 0.8 }}
+                  animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                  exit={{ opacity: 0, rotate: 90, scale: 0.8 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                >
+                  {isMounted &&
+                    (theme === "light" ? (
+                      <MoonIcon size={18} />
+                    ) : (
+                      <SunIcon size={18} />
+                    ))}
+                </motion.div>
+              </AnimatePresence>
+            </button>
+          </li>
         </ul>
 
-        {/* --- Animated Theme Toggle --- */}
-        <button
-          onClick={toggleTheme}
-          className="btn btn-ghost btn-circle hover:bg-base-200"
-          title={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={theme}
-              initial={{ opacity: 0, rotate: -90, scale: 0.8 }}
-              animate={{ opacity: 1, rotate: 0, scale: 1 }}
-              exit={{ opacity: 0, rotate: 90, scale: 0.8 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-            >
-              {isMounted && (theme === "light" ? <MoonIcon size={18} /> : <SunIcon size={18} />)}
-            </motion.div>
-          </AnimatePresence>
-        </button>
-
-        {/* --- Mobile Menu --- */}
+        {/* --- Mobile Dropdown Menu --- */}
         <div className="dropdown dropdown-end sm:hidden">
           <label tabIndex={0} className="btn btn-ghost btn-circle">
             <svg
@@ -102,13 +112,21 @@ export function Navbar() {
           </label>
           <ul
             tabIndex={0}
-            className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-40"
+            className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-44"
           >
             <li>
               <NavLink to="/">Home</NavLink>
             </li>
             <li>
               <NavLink to="/admin">Admin</NavLink>
+            </li>
+            <li>
+              <button
+                onClick={toggleTheme}
+                className="btn btn-ghost justify-start"
+              >
+                {isMounted && (theme === "light" ? "🌙 Dark Mode" : "☀️ Light Mode")}
+              </button>
             </li>
           </ul>
         </div>
