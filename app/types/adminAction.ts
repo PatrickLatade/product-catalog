@@ -47,14 +47,28 @@ export const adminAction: ActionFunction = async ({ request }) => {
       const id = parseInt(formData.get("id")?.toString() || "0");
       if (!id) throw new Error("Missing product ID for edit");
 
+      // Get cart quantity to calculate actual stock
+      const cartQuantity = parseInt(formData.get("cartQuantity")?.toString() || "0");
+      
+      // Calculate the actual stock by adding back the cart quantity
+      // This is because the frontend shows: actualStock - cartQuantity
+      // So when user enters a new value, we need to add cartQuantity back
+      const actualStock = stock + cartQuantity;
+
+      const updateData: any = {
+        name,
+        price,
+        stock: actualStock, // Store the actual stock value
+        description,
+      };
+
+      // Only update imageUrl if a new image was uploaded
+      if (imageUrl) {
+        updateData.imageUrl = imageUrl;
+      }
+
       await db.update(products)
-        .set({
-          name,
-          price,
-          stock,
-          description,
-          ...(imageUrl ? { imageUrl } : {}),
-        })
+        .set(updateData)
         .where(eq(products.id, id));
 
       return { success: "Product updated successfully!" };
@@ -73,7 +87,11 @@ export const adminAction: ActionFunction = async ({ request }) => {
       const id = parseInt(formData.get("id")?.toString() || "0");
       if (!id) throw new Error("Missing product ID for stock adjustment");
 
-      await db.update(products).set({ stock }).where(eq(products.id, id));
+      // Get cart quantity for stock adjustment as well
+      const cartQuantity = parseInt(formData.get("cartQuantity")?.toString() || "0");
+      const actualStock = stock + cartQuantity;
+
+      await db.update(products).set({ stock: actualStock }).where(eq(products.id, id));
       return { success: "Stock adjusted successfully!" };
     }
 

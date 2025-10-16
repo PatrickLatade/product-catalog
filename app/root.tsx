@@ -10,6 +10,7 @@ import {
 import { motion } from "framer-motion";
 import type { Route } from "./+types/root";
 import "./app.css";
+import { CartProvider } from "app/hooks/useCart";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -46,14 +47,16 @@ export default function App() {
   const location = useLocation();
 
   return (
-    <motion.div
-      key={location.pathname}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      <Outlet />
-    </motion.div>
+    <CartProvider>
+      <motion.div
+        key={location.pathname}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Outlet />
+      </motion.div>
+    </CartProvider>
   );
 }
 

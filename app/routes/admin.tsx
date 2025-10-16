@@ -13,6 +13,7 @@ import { products } from "app/db/schema";
 import { adminAction } from "app/types/adminAction";
 import { motion, AnimatePresence } from "framer-motion";
 import { useProductFilters } from "app/hooks/useProductFilters";
+import { useCart } from "app/hooks/useCart";
 
 export const action = adminAction;
 
@@ -23,10 +24,34 @@ export async function loader() {
 
 export default function Admin() {
   const productList = useLoaderData() as Product[];
+  const { cart } = useCart();
   const navigation = useNavigation();
   const actionData = useActionData() as any;
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
+
+  // Create a map of cart quantities for easy lookup
+  const cartQuantityMap = useMemo(() => {
+    const map = new Map<number, number>();
+    cart.forEach((item) => {
+      map.set(item.id, item.quantity);
+    });
+    return map;
+  }, [cart]);
+
+  const productsWithAdjustedStock = useMemo(() => {
+    return productList.map((p) => {
+      const inCartQty = cartQuantityMap.get(p.id) || 0;
+      const adjustedStock = Math.max(p.stock - inCartQty, 0);
+      return {
+        ...p,
+        stock: adjustedStock,
+        // Store original stock and cart quantity for reverse calculation
+        _originalStock: p.stock,
+        _cartQuantity: inCartQty,
+      };
+    });
+  }, [productList, cartQuantityMap]);
 
   // --- Modal and toast states ---
   const [editing, setEditing] = useState<Product | null>(null);
@@ -54,7 +79,7 @@ export default function Admin() {
   // --- Filter + Sort logic ---
   // --- Use custom hook ---
   const { filteredProducts, hasActiveFilters, clearFilters } =
-    useProductFilters(productList, search, sort, stockFilter);
+    useProductFilters(productsWithAdjustedStock, search, sort, stockFilter);
 
   // --- Reset filters ---
   const handleClearFilters = () => {
@@ -164,6 +189,7 @@ export default function Admin() {
             isSubmitting={isSubmitting}
             isClosing={isClosing}
             setIsClosing={setIsClosing}
+            cartQuantityMap={cartQuantityMap}
           />
         )}
         {deleting && (

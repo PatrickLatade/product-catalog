@@ -9,6 +9,7 @@ interface EditProductModalProps {
   isClosing: boolean;
   setIsClosing: React.Dispatch<React.SetStateAction<boolean>>;
   error?: string;
+  cartQuantityMap: Map<number, number>;
 }
 
 export function EditProductModal({
@@ -18,8 +19,15 @@ export function EditProductModal({
   isClosing,
   setIsClosing,
   error,
+  cartQuantityMap,
 }: EditProductModalProps) {
   if (!editing) return null;
+
+  // Get the cart quantity for this product
+  const cartQuantity = cartQuantityMap.get(editing.id) || 0;
+  
+  // Calculate the actual stock (what's shown + what's in cart)
+  const actualStock = editing.stock + cartQuantity;
 
   return (
     <>
@@ -40,6 +48,8 @@ export function EditProductModal({
 
           <Form method="post" encType="multipart/form-data" className="space-y-3">
             <input type="hidden" name="id" value={editing.id} />
+            {/* Hidden field for cart quantity so backend knows to adjust */}
+            <input type="hidden" name="cartQuantity" value={cartQuantity} />
 
             <div>
               <label className="label">
@@ -70,7 +80,14 @@ export function EditProductModal({
 
             <div>
               <label className="label">
-                <span className="label-text">Stock Quantity</span>
+                <span className="label-text">
+                  Stock Quantity
+                  {cartQuantity > 0 && (
+                    <span className="text-xs ml-2 text-info">
+                      (Available: {editing.stock} | In Cart: {cartQuantity} | Actual: {actualStock})
+                    </span>
+                  )}
+                </span>
               </label>
               <input
                 type="number"
@@ -80,6 +97,13 @@ export function EditProductModal({
                 className="input input-bordered w-full"
                 required
               />
+              {cartQuantity > 0 && (
+                <label className="label">
+                  <span className="label-text-alt text-info">
+                    Modify the displayed stock value. System will automatically account for {cartQuantity} item(s) in cart.
+                  </span>
+                </label>
+              )}
             </div>
 
             <div>
@@ -111,8 +135,9 @@ export function EditProductModal({
                 name="_action"
                 value="edit"
                 className={`btn btn-primary ${isSubmitting ? "loading" : ""}`}
+                disabled={isSubmitting}
               >
-                Update
+                {isSubmitting ? "Updating..." : "Update"}
               </button>
               <label
                 htmlFor="edit_modal"

@@ -7,6 +7,7 @@ import { ProductCard } from "app/components/ProductCard";
 import { motion } from "framer-motion";
 import { FilterBar } from "app/components/FilterBar";
 import { useProductFilters } from "app/hooks/useProductFilters";
+import { useCart } from "app/hooks/useCart"; // ✅ added import
 
 export async function loader() {
   const result = await db.select().from(products);
@@ -17,6 +18,19 @@ export default function Home() {
   const productList = useLoaderData<typeof loader>();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
+  const { cart } = useCart(); // ✅ access cart data
+
+  // --- Adjust stock counts based on what's in the cart ---
+  const productsWithAdjustedStock = useMemo(() => {
+    return productList.map((p) => {
+      const inCart = cart.find((item) => item.id === p.id);
+      const adjustedStock = Math.max(p.stock - (inCart?.quantity || 0), 0);
+      return {
+        ...p,
+        stock: adjustedStock,
+      };
+    });
+  }, [productList, cart]);
 
   // --- State synced with URL ---
   const [search, setSearch] = useState(params.get("search") ?? "");
@@ -33,10 +47,8 @@ export default function Home() {
   }, [search, sort, stockFilter, navigate]);
 
   // --- Filter + Sort logic ---
-
-  // --- Use custom hook ---
   const { filteredProducts, hasActiveFilters, clearFilters } =
-    useProductFilters(productList, search, sort, stockFilter);
+    useProductFilters(productsWithAdjustedStock, search, sort, stockFilter); // ✅ use adjusted list here
 
   // --- Reset filters ---
   const handleClearFilters = () => {
