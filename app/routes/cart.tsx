@@ -1,13 +1,53 @@
+// app/routes/cart.tsx
+import { useEffect, useRef } from "react";
 import { Navbar } from "app/components/Navbar";
 import { useCart } from "app/hooks/useCart";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, Form, useActionData, useNavigation, useNavigate } from "react-router-dom";
 import { Trash2, Plus, Minus, ArrowLeft } from "lucide-react";
+import { action as cartAction } from "app/types/cartAction";
+
+export { cartAction as action };
 
 export default function CartPage() {
   const { cart, removeFromCart, addToCart, decreaseQuantity, clearCart } = useCart();
-
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const actionData = useActionData() as
+    | { success?: boolean; items?: any[]; total?: number; error?: string }
+    | undefined;
+
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
+  const navigate = useNavigate();
+
+  // Prevent double navigation
+  const hasNavigatedRef = useRef(false);
+
+  // Redirect to success page if checkout succeeded
+  useEffect(() => {
+    if (actionData?.success && !hasNavigatedRef.current) {
+      hasNavigatedRef.current = true;
+      
+      // Pass the full cart data with all details including imageUrl
+      const purchasedItems = cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        imageUrl: item.imageUrl
+      }));
+      
+      clearCart(); // clear cart locally
+      navigate("/checkout-success", {
+        state: { 
+          purchasedItems: purchasedItems, 
+          total: actionData.total 
+        },
+        replace: true,
+      });
+    }
+  }, [actionData, cart, clearCart, navigate]);
 
   return (
     <main data-theme="business" className="min-h-screen bg-base-200 text-base-content">
@@ -19,6 +59,7 @@ export default function CartPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
       >
+        {/* --- Header --- */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">🛒 Your Cart</h1>
           {cart.length > 0 && (
@@ -28,6 +69,7 @@ export default function CartPage() {
           )}
         </div>
 
+        {/* --- Empty State --- */}
         {cart.length === 0 ? (
           <motion.div
             className="text-center py-20"
@@ -42,6 +84,7 @@ export default function CartPage() {
           </motion.div>
         ) : (
           <>
+            {/* --- Cart Table --- */}
             <div className="overflow-x-auto">
               <table className="table w-full bg-base-100 shadow rounded-lg">
                 <thead>
@@ -122,7 +165,7 @@ export default function CartPage() {
               </table>
             </div>
 
-            {/* --- Cart Summary --- */}
+            {/* --- Cart Summary & Checkout --- */}
             <div className="flex justify-end mt-8">
               <div className="bg-base-100 shadow-lg rounded-xl p-6 w-full sm:w-80">
                 <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
@@ -130,9 +173,24 @@ export default function CartPage() {
                   Items: {cart.reduce((sum, item) => sum + item.quantity, 0)}
                 </p>
                 <p className="text-lg font-bold mb-4">Total: ${total.toFixed(2)}</p>
-                <button className="btn btn-primary w-full" disabled={cart.length === 0}>
-                  Checkout (Mock)
-                </button>
+
+                <Form method="post">
+                  <input type="hidden" name="intent" value="checkout" />
+                  <input
+                    type="hidden"
+                    name="cart"
+                    value={JSON.stringify(
+                      cart.map(({ id, quantity }) => ({ id, quantity }))
+                    )}
+                  />
+                  <button
+                    type="submit"
+                    className="btn btn-primary w-full"
+                    disabled={cart.length === 0 || isSubmitting}
+                  >
+                    {isSubmitting ? "Checking out..." : "Checkout 🛒"}
+                  </button>
+                </Form>
               </div>
             </div>
           </>
