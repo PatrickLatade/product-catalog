@@ -1,6 +1,6 @@
 import { useLoaderData, useNavigation, useActionData, useSearchParams, useNavigate } from "react-router-dom";
 import { FilterBar } from "app/components/FilterBar";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Navbar } from "app/components/Navbar";
 import { ProductTable } from "app/components/admin/ProductTable";
 import { AddProductModal } from "app/components/admin/AddProductModal";
@@ -11,7 +11,7 @@ import type { Product } from "app/types/Product";
 import { db } from "app/db/client";
 import { products } from "app/db/schema";
 import { adminAction } from "app/types/adminAction";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useProductFilters } from "app/hooks/useProductFilters";
 import { useCart } from "app/hooks/useCart";
 
@@ -29,29 +29,6 @@ export default function Admin() {
   const actionData = useActionData() as any;
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-
-  // Create a map of cart quantities for easy lookup
-  const cartQuantityMap = useMemo(() => {
-    const map = new Map<number, number>();
-    cart.forEach((item) => {
-      map.set(item.id, item.quantity);
-    });
-    return map;
-  }, [cart]);
-
-  const productsWithAdjustedStock = useMemo(() => {
-    return productList.map((p) => {
-      const inCartQty = cartQuantityMap.get(p.id) || 0;
-      const adjustedStock = Math.max(p.stock - inCartQty, 0);
-      return {
-        ...p,
-        stock: adjustedStock,
-        // Store original stock and cart quantity for reverse calculation
-        _originalStock: p.stock,
-        _cartQuantity: inCartQty,
-      };
-    });
-  }, [productList, cartQuantityMap]);
 
   // --- Modal and toast states ---
   const [editing, setEditing] = useState<Product | null>(null);
@@ -77,9 +54,9 @@ export default function Admin() {
   }, [search, sort, stockFilter, navigate]);
 
   // --- Filter + Sort logic ---
-  // --- Use custom hook ---
+  // Admin sees **real stock**, cart is ignored
   const { filteredProducts, hasActiveFilters, clearFilters } =
-    useProductFilters(productsWithAdjustedStock, search, sort, stockFilter);
+    useProductFilters(productList, search, sort, stockFilter);
 
   // --- Reset filters ---
   const handleClearFilters = () => {
@@ -189,7 +166,7 @@ export default function Admin() {
             isSubmitting={isSubmitting}
             isClosing={isClosing}
             setIsClosing={setIsClosing}
-            cartQuantityMap={cartQuantityMap}
+            cartQuantityMap={new Map()} // only used for info, not for stock
           />
         )}
         {deleting && (

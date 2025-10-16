@@ -9,7 +9,7 @@ interface EditProductModalProps {
   isClosing: boolean;
   setIsClosing: React.Dispatch<React.SetStateAction<boolean>>;
   error?: string;
-  cartQuantityMap: Map<number, number>;
+  cartQuantityMap?: Map<number, number>; // optional
 }
 
 export function EditProductModal({
@@ -23,10 +23,8 @@ export function EditProductModal({
 }: EditProductModalProps) {
   if (!editing) return null;
 
-  // Get the cart quantity for this product
-  const cartQuantity = cartQuantityMap.get(editing.id) || 0;
-  
-  // Calculate the actual stock (what's shown + what's in cart)
+  // Only calculate cart quantity if a map is provided
+  const cartQuantity = cartQuantityMap?.get(editing.id) || 0;
   const actualStock = editing.stock + cartQuantity;
 
   return (
@@ -48,8 +46,10 @@ export function EditProductModal({
 
           <Form method="post" encType="multipart/form-data" className="space-y-3">
             <input type="hidden" name="id" value={editing.id} />
-            {/* Hidden field for cart quantity so backend knows to adjust */}
-            <input type="hidden" name="cartQuantity" value={cartQuantity} />
+
+            {cartQuantity > 0 && (
+              <input type="hidden" name="cartQuantity" value={cartQuantity} />
+            )}
 
             <div>
               <label className="label">
