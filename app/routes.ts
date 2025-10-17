@@ -11,12 +11,12 @@ export default [
   // Admin
   route("admin", "routes/admin.tsx"),
 
-  // test
-  route("test", "routes/test.tsx"),
-
   // cart
   route("cart", "routes/cart.tsx"),
 
   // checout
   route("checkout-success", "routes/checkout-success.tsx"),
+
+  // API route
+  route("api/products", "routes/api/products.ts"),
 ] satisfies RouteConfig;

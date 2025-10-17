@@ -1,27 +1,42 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { products } from "./schema.js";
+import fs from "fs";
+import path from "path";
 
-// ---------- CATEGORY IMAGE SEEDS (STABLE) ----------
-const imageSeeds: Record<string, string[]> = {
-  electronics: ["electronics", "tech", "gadget", "devices"],
-  clothing: ["clothes", "fashion", "tshirt", "outfit"],
-  home: ["furniture", "interior", "home-decor", "appliances"],
-  sports: ["sports", "fitness", "running", "training"],
-  books: ["books", "library", "reading"],
-  beauty: ["beauty", "cosmetics", "skincare"],
-  gaming: ["gaming", "console", "pc-gaming", "esports"],
+// ---------- BUILD IMAGE MAP (GROUP VARIANTS) ----------
+function buildImageMap() {
+  const imageDir = path.resolve(process.cwd(), "public/images");
+  const files = fs.readdirSync(imageDir);
+
+  const map: Record<string, string[]> = {};
+  for (const file of files) {
+    const baseName = path.basename(file, path.extname(file)).toLowerCase();
+    const key = baseName.replace(/-\d+$/, ""); // group variants like 'smart-thermostat-1'
+    if (!map[key]) map[key] = [];
+    map[key].push(`/images/${file}`);
+  }
+
+  console.log("🗺️ Loaded image groups:", Object.keys(map));
+  return map;
+}
+
+// ---------- TEMPLATE ALIAS MAP ----------
+const templateAliases: Record<string, string[]> = {
+  premium: ["smart", "wireless"],
+  ergonomic: ["chair", "desk"],
+  wireless: ["tech", "smart"],
+  smart: ["premium", "wireless"],
+  gaming: ["ergonomic"],
 };
 
 // ---------- PRODUCT GENERATOR ----------
-function generateProducts(count: number) {
-  const categories = [
-    "electronics", "clothing", "home", "sports", "books", "beauty"
-  ];
+function generateProducts(targetCount = 50) {
+  const imageMap = buildImageMap();
 
   const productTemplates = [
     { name: "Wireless", base: ["Mouse", "Keyboard", "Headphones", "Charger", "Speaker"] },
-    { name: "Premium", base: ["Watch", "Backpack", "Sunglasses", "Pen", "Notebook"] },
+    { name: "Premium", base: ["Watch", "Backpack", "Sunglasses", "Pen", "Notebook", "Thermostat"] },
     { name: "Ergonomic", base: ["Chair", "Desk", "Mouse Pad", "Monitor Stand"] },
     { name: "Smart", base: ["TV", "Light Bulb", "Thermostat", "Plug", "Scale"] },
     { name: "Gaming", base: ["Controller", "Headset", "Mouse", "Keyboard", "Chair"] },
@@ -29,34 +44,81 @@ function generateProducts(count: number) {
 
   const generatedProducts = [];
 
-  for (let i = 0; i < count; i++) {
-    const template = productTemplates[Math.floor(Math.random() * productTemplates.length)];
-    const baseProduct = template.base[Math.floor(Math.random() * template.base.length)];
-    const category = categories[Math.floor(Math.random() * categories.length)];
-
-    const name = `${template.name} ${baseProduct}`;
-    const price = (Math.random() * 200 + 10).toFixed(2);
-    const stock = Math.floor(Math.random() * 50);
-
-    // ---------- SMART IMAGE SELECTION ----------
-    const categoryKey =
-      template.name.toLowerCase().includes("gaming") ? "gaming" : category;
-    const seeds = imageSeeds[categoryKey] || imageSeeds["electronics"];
-    const seed = seeds[i % seeds.length]; // rotate among related seeds
-
-    // Picsum will generate stable images for each seed
-    const imageUrl = `https://picsum.photos/seed/${categoryKey}-${seed}-${i}/400/300`;
-
-    generatedProducts.push({
-      name,
-      description: `High-quality ${name.toLowerCase()} for everyday use. Features premium materials and excellent performance.`,
-      price: parseFloat(price),
-      imageUrl,
-      stock,
-    });
+  // Generate base set first (covers all unique template+base combos)
+  for (const template of productTemplates) {
+    for (const baseProduct of template.base) {
+      const name = `${template.name} ${baseProduct}`;
+      generatedProducts.push(createProduct(name, template.name, baseProduct, imageMap));
+    }
   }
 
-  return generatedProducts;
+  // If we need more, add duplicates (with different images) but keep same name
+  while (generatedProducts.length < targetCount) {
+    const template = productTemplates[Math.floor(Math.random() * productTemplates.length)];
+    const baseProduct = template.base[Math.floor(Math.random() * template.base.length)];
+    const name = `${template.name} ${baseProduct}`; // no suffix number
+    generatedProducts.push(createProduct(name, template.name, baseProduct, imageMap));
+  }
+
+  return generatedProducts.slice(0, targetCount); // ensure exactly 50
+}
+
+// ---------- CREATE PRODUCT HELPER ----------
+function createProduct(
+  name: string,
+  templateName: string,
+  baseProduct: string,
+  imageMap: Record<string, string[]>
+) {
+  const baseKey = baseProduct.toLowerCase().replace(/[\s_]/g, "-");
+  const templateKey = templateName.toLowerCase().replace(/[\s_]/g, "-");
+
+  // ---------- SMART PRIORITIZED MATCH ----------
+  let matchedKey: string | undefined;
+
+  // 1️⃣ Exact "template-base"
+  if (imageMap[`${templateKey}-${baseKey}`]) {
+    matchedKey = `${templateKey}-${baseKey}`;
+  }
+  // 2️⃣ Base only
+  else if (imageMap[baseKey]) {
+    matchedKey = baseKey;
+  }
+  // 3️⃣ Aliases
+  else if (templateAliases[templateKey]) {
+    for (const alias of templateAliases[templateKey]) {
+      if (imageMap[`${alias}-${baseKey}`]) {
+        matchedKey = `${alias}-${baseKey}`;
+        break;
+      }
+    }
+  }
+  // 4️⃣ Compound fuzzy
+  if (!matchedKey) {
+    matchedKey = Object.keys(imageMap).find(
+      (key) => key.includes(baseKey) && key.includes(templateKey)
+    );
+  }
+
+  // 5️⃣ Default fallback
+  const imageGroup = matchedKey ? imageMap[matchedKey] : imageMap["default"];
+  const imageUrl =
+    imageGroup && imageGroup.length > 0
+      ? imageGroup[Math.floor(Math.random() * imageGroup.length)] // pick random variant
+      : "/images/default.jpg";
+
+  const price = parseFloat((Math.random() * 200 + 10).toFixed(2));
+  const stock = Math.floor(Math.random() * 50) + 5;
+
+  console.log(`✅ ${name.padEnd(25)} → ${matchedKey || "default"} (${imageUrl})`);
+
+  return {
+    name,
+    description: `High-quality ${name.toLowerCase()} for everyday use. Built for durability and performance.`,
+    price,
+    imageUrl,
+    stock,
+  };
 }
 
 // ---------- SEED FUNCTION ----------
@@ -70,14 +132,11 @@ async function seed() {
 
   const db = drizzle(connection);
 
-  // Clear existing rows
   await db.delete(products);
-
-  // Generate and insert 50 products
   const seedProducts = generateProducts(50);
   await db.insert(products).values(seedProducts);
 
-  console.log("✅ 50 products seeded successfully!");
+  console.log(`🌱 ${seedProducts.length} products seeded successfully with randomized image variants (no numbered names)!`);
   await connection.end();
 }
 
